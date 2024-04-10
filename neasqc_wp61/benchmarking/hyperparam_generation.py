@@ -1,31 +1,19 @@
 import pandas as pd
+import itertools
 
-data = {
-    'model_type': ["alpha3"], #Let's not forget Alpha4 later on
-    'embedding_type': ["BERT"], #which ones???
-    'dimensionality_reduction_technique': ["PCA", "ICA", "TSVD", "UMAP", "TSNE"],
-    'ansatz': ["Sim14", "Sim15", "StronglyEntangling"],
-    'number_of_layers': [i for i in range(1, 3+1)],
-    'number_of_qubits': [i for i in range(2, 16+1, 2)],
-    'qubit_initialisation_technique': ["constant", "normal_centered_pi", "uniform_between_0_2pi"], #the names must be checked to match actual names
-    'optimizer': ["Adam", "SPSA", "SGD", "RMSProp", "Cobyla", "Nelder-Mead", "Adagrad"],
-    'optimizer_lr': [0.0001 * (10 ** i) for i in range(5)],
-    'optimizer_parameters': [None], #Not sure what we want here
-}
+model_types = ["alpha3"] #Let's not forget Alpha4 later on
+embedding_type = ["BERT", "ember"]
+dimensionality_reduction_technique = ["PCA", "ICA", "TSVD", "UMAP", "TSNE"] #add the MLP later on?
+ansatz = ["Sim14", "Sim15", "StronglyEntangling"]
+number_of_layers = [i for i in range(1, 3+1)]
+number_of_qubits = [i for i in range(2, 16+1, 2)]
+qubit_initialisation_technique = ["norm", "rescaled_unif"]
+optimizer = ["Adadelta", "Adagrad", "Adam", "AdamW", "SPSA", "SGD", "RMSProp", "Cobyla", "Nelder-Mead", ""]
+optimizer_lr = [0.0001, 0.001, 0.01, 0.1] #1
+mlp_init = ["unif", "norm"]
 
-number_of_epochs = 20 #Fixed for grid search
+combinations = list(itertools.product(model_types, embedding_type, dimensionality_reduction_technique, ansatz, number_of_layers, number_of_qubits, qubit_initialisation_technique, optimizer, optimizer_lr, mlp_init))
 
-df = pd.DataFrame(data)
+df = pd.DataFrame(combinations, columns=['models', 'embeddings', 'dimensionality_reduction_technique', 'ansatz', 'nb_layers', 'nb_qubits', 'qubit_init_tecchnique', 'optimizer', 'optimizer_lr', 'mlp_init' ])
 
-for model in df['model_type']:
-    for embedding in df['embedding_type']:
-        for dim_reduc in df['dimensionality_reduction_technique']:
-            for ansatz in df['ansatz']:
-                for nb_layers in df['number_of_layers']:
-                    for nb_qubits in df['number_of_layers']:
-                        for qubit_init in df['qubit_initialisation_technique']:
-                            for optim in df['optimizer']:
-                                for lr in df['optimizer_lr']:
-                                    for nb_epochs in df['optimizer_number_of_epochs']:
-                                        for opti_params in df['optimizer_parameters']:
-                                            print(f"Model: {model} \t embedding : {embedding} \t dimensionality reduction : {dim_reduc} \t ansatz : {ansatz}")
+print(df)
