@@ -99,6 +99,11 @@ class TestDimReduction(unittest.TestCase):
                 )
                 name_dataset += ".pkl"
                 df = pd.read_pickle(name_dataset)
+
+                file_path = os.path.join(current_path, name_dataset)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
                 for value in df["reduced_sentence_vector"]:
                     self.assertEqual(value.shape[0], self.dim_out)
 
