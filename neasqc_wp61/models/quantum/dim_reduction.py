@@ -6,6 +6,7 @@ Module containing the base class for performing dimensionality reduction.
 """
 
 import numpy as np
+import os
 import pandas as pd
 import sklearn.decomposition as skd
 import sklearn.manifold as skm
@@ -84,19 +85,23 @@ class DimReduction(ABC):
             "Suclasses must implement the reduce_dimension method."
         )
 
-    def save_dataset(self, filename: str, dataset_path: str) -> None:
+    def save_dataset(
+        self, reduced_dataset: pd.DataFrame, path: str, filename: str
+    ) -> None:
         """
-        Save the reduced dataset in a given path.
+        Save the reduced dataset in a given path as a pickle file.
 
         Parameters
         ----------
-        filename : str
-            Name of the file to save to.
-        dataset_path : str
+        reduced_dataset : pd.DataFrame
+            The dataframe with the reduced embedding vectors that we
+            wish to save as a file.
+        path : str
             Path where to store the dataset.
+        filename : str
+            Name of the file to save to (should not contain extensions).
         """
-        filepath = f"{dataset_path}{filename}.tsv"
-        self.dataset.to_csv(filepath, sep="\t", index=False)
+        reduced_dataset.to_pickle(os.path.join(path, filename) + ".pkl")
 
 
 class PCA(DimReduction):
@@ -138,7 +143,8 @@ class PCA(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        self.pca_sk.fit(embeddings_to_fit)
+        X = np.stack(embeddings_to_fit)
+        self.pca_sk.fit(X)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
@@ -147,8 +153,14 @@ class PCA(DimReduction):
         """
         reduced_data = data_to_reduce.copy()
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        sentence_vectors_reduced = self.pca_sk.transform(embeddings_to_reduce)
-        reduced_data["reduced_sentence_vector"] = sentence_vectors_reduced
+        X = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.pca_sk.transform(X)
+        reduced_vectors_list = sentence_vectors_reduced.tolist()
+        reduced_vectors_list = [
+            np.array(vec, dtype=np.float32) for vec in reduced_vectors_list
+        ]
+        reduced_data["reduced_sentence_vector"] = reduced_vectors_list
+
         return reduced_data
 
 
@@ -157,7 +169,7 @@ class ICA(DimReduction):
     Class for the independent component analysis implementation.
     """
 
-    def __init__(self, dataset: pd.DataFrame, dim_out: int, **kwargs) -> None:
+    def __init__(self, dim_out: int, **kwargs) -> None:
         """
         Initialise the ICA dimensionality reduction class.
 
@@ -191,7 +203,8 @@ class ICA(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        self.ica_sk.fit(embeddings_to_fit)
+        X = np.stack(embeddings_to_fit)
+        self.ica_sk.fit(X)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
@@ -200,8 +213,14 @@ class ICA(DimReduction):
         """
         reduced_data = data_to_reduce.copy()
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        sentence_vectors_reduced = self.ica_sk.transform(embeddings_to_reduce)
-        reduced_data["reduced_sentence_vector"] = sentence_vectors_reduced
+        X = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.ica_sk.transform(X)
+        reduced_vectors_list = sentence_vectors_reduced.tolist()
+        reduced_vectors_list = [
+            np.array(vec, dtype=np.float32) for vec in reduced_vectors_list
+        ]
+        reduced_data["reduced_sentence_vector"] = reduced_vectors_list
+
         return reduced_data
 
 
@@ -244,17 +263,24 @@ class TSVD(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        self.tsvd_sk.fit(embeddings_to_fit)
+        X = np.stack(embeddings_to_fit)
+        self.tsvd_sk.fit(X)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
         Reduces the embeddings in the input dataframe with the fitted
-        ICA.
+        TSVD.
         """
         reduced_data = data_to_reduce.copy()
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        sentence_vectors_reduced = self.tsvd_sk.transform(embeddings_to_reduce)
-        reduced_data["reduced_sentence_vector"] = sentence_vectors_reduced
+        X = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.tsvd_sk.transform(X)
+        reduced_vectors_list = sentence_vectors_reduced.tolist()
+        reduced_vectors_list = [
+            np.array(vec, dtype=np.float32) for vec in reduced_vectors_list
+        ]
+        reduced_data["reduced_sentence_vector"] = reduced_vectors_list
+
         return reduced_data
 
 
@@ -263,7 +289,7 @@ class UMAP(DimReduction):
     Class for UMAP dimensionality reduction.
     """
 
-    def __init__(self, dataset: pd.DataFrame, dim_out: int, **kwargs) -> None:
+    def __init__(self, dim_out: int, **kwargs) -> None:
         """
         Initialise the UMAP dimensionality reduction class.
 
@@ -297,7 +323,8 @@ class UMAP(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        self.umap_sk.fit(embeddings_to_fit)
+        X = np.stack(embeddings_to_fit)
+        self.umap_sk.fit(X)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
@@ -306,17 +333,25 @@ class UMAP(DimReduction):
         """
         reduced_data = data_to_reduce.copy()
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        sentence_vectors_reduced = self.umap_sk.transform(embeddings_to_reduce)
-        reduced_data["reduced_sentence_vector"] = sentence_vectors_reduced
+        X = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.umap_sk.transform(X)
+        reduced_vectors_list = sentence_vectors_reduced.tolist()
+        reduced_vectors_list = [
+            np.array(vec, dtype=np.float32) for vec in reduced_vectors_list
+        ]
+        reduced_data["reduced_sentence_vector"] = reduced_vectors_list
+
         return reduced_data
 
 
+# Dropping TSNE for now as it does not have a transform method
+'''
 class TSNE(DimReduction):
     """
     Class for truncated TSNE dimensionality reduction.
     """
 
-    def __init__(self, dataset: pd.DataFrame, dim_out: int, **kwargs) -> None:
+    def __init__(self, dim_out: int, **kwargs) -> None:
         """
         Initialise the TSNE dimensionality reduction class.
 
@@ -329,7 +364,7 @@ class TSNE(DimReduction):
             They can be found in
             https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html.
         """
-        super().__init__(dataset=dataset, dim_out=dim_out)
+        super().__init__(dim_out=dim_out)
         self.tsne_sk = skm.TSNE(n_components=self.dim_out, **kwargs)
 
     def fit(
@@ -350,7 +385,8 @@ class TSNE(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        self.tsne_sk.fit(embeddings_to_fit)
+        X = np.stack(embeddings_to_fit)
+        self.tsne_sk.fit(X)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
@@ -359,6 +395,10 @@ class TSNE(DimReduction):
         """
         reduced_data = data_to_reduce.copy()
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        sentence_vectors_reduced = self.tsne_sk.transform(embeddings_to_reduce)
-        reduced_data["reduced_sentence_vector"] = sentence_vectors_reduced
+        X = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.tsne_sk.transform(X)
+        reduced_data["reduced_sentence_vector"] = (
+            sentence_vectors_reduced.tolist()
+        )
         return reduced_data
+'''
