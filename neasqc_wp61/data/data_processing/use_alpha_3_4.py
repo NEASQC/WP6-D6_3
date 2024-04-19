@@ -391,3 +391,6 @@ if __name__ == "__main__":
     main()
 
     
+# Finish documenting 
+
+# Test with ag_news dataset, test outputs look good
