@@ -3,18 +3,16 @@ from typing import Dict
 import numpy as np
 import json
 
-def create_table(DB, TABLE, col_names):
-    """ Create a table TABLE in database DB which will include a unique id as
-     primary key.
-    """
+def create_table(DB, TABLE, col_definitions):
+    """ Create a table TABLE in database DB."""
 
     conn = sqlite3.connect(DB)
     cursor = conn.cursor()
 
-    col_names = ['id INTEGER PRIMARY KEY'] + col_names
+    col_definitions = [' '.join(col_def) for col_def in col_definitions]
 
     create_table_sql = f"""CREATE TABLE IF NOT EXISTS {TABLE} 
-                        ({', '.join(col_names)})"""
+                        ({', '.join(col_definitions)})"""
     cursor.execute(create_table_sql)
 
     conn.commit()
@@ -114,9 +112,18 @@ def main():
     reset_table(DB=DATABASE, TABLE=TABLE)
     #TODO: make sure that we have all the columns that we want and that their 
     # names are exactly what we want
-    column_names = ['loss', 'accuracy', 'nb_qbits', 'optimizer', 'optimizer_lr',
-                     'ansatz', 'idx', 'seed']
-    create_table(DATABASE, TABLE, column_names)
+    column_defs = [
+    ('id', 'INTEGER PRIMARY KEY'), #TODO: move this to table creation so it's ensured to always be there
+    ('loss', 'JSON'), #Note: important that it's JSON and not text for the extra functionalities
+    ('accuracy', 'JSON'),
+    ('nb_qbits', 'INT'),
+    ('optimizer', 'TEXT'),
+    ('optimizer_lr', 'REAL'),
+    ('ansatz', 'TEXT'),
+    ('idx', 'INT'),
+    ('seed', 'INT')
+    ]
+    create_table(DATABASE, TABLE, column_defs)
 
     for row in range(nb_xps):
         # This is what we need to get from the big pandas dataframe
