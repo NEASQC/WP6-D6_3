@@ -1,17 +1,13 @@
 import sqlite3
 from typing import Dict
 import numpy as np
-
-"""
-Let's not write complicated tests for these. Just very basic things like:
-1) After I create a table, it's there (and it wasn't there before)
-2) When I retrieve data from the table, it's the correct row/col (hardcode smth 
-and see whether it fetches it correctly)
-3) If I ask for a row/col that's not there, I do get None
-4) Something that I insert is there aftern I'v inserted it (and it wasn't there before)
-"""
+import json
 
 def create_table(DB, TABLE, col_names):
+    """ Create a table TABLE in database DB which will include a unique id as
+     primary key.
+    """
+
     conn = sqlite3.connect(DB)
     cursor = conn.cursor()
 
@@ -25,8 +21,11 @@ def create_table(DB, TABLE, col_names):
     conn.close()
 
 
+
 def reset_table(DB, TABLE):
-    """ Resets the data in the table if it exists, otherwise does nothing. """
+    """ Reset the data in the table if it exists, otherwise does nothing.
+    DANGEROUS, use with care
+    """
 
     conn = sqlite3.connect(DB)
     cursor = conn.cursor()
@@ -90,17 +89,13 @@ def mock_extract_hyperparameters_from_dataframe(row) -> Dict:
 def serialise_results(unserialised_results) -> Dict:
     # TODO: this but for every serial value we get from the results
     # TODO: make sure we feed a dict with only serial values
-    serialised_loss = serialise(unserialised_results['loss'])
-    serialised_accuracy = serialise(unserialised_results['accuracy'])
+    serialised_loss = json.dumps(unserialised_results['loss'].tolist())
+    serialised_accuracy = json.dumps(unserialised_results['accuracy'].tolist())
     results = {
         'loss':         serialised_loss,
         'accuracy':     serialised_accuracy
     }
     return results
-
-
-def serialise(series) -> str:
-    return np.array2string(series, separator=',').strip('[]')
 
 
 
@@ -113,8 +108,12 @@ def main():
     # Here there will need to be 1 DB for preliminary, 1 DB for full grid search 
     # and 1 DB for final. They need to be different DB, so total of 3 DB per dataset
     DATABASE = 'neasqc_experiments.db'
-    TABLE = 'mock_testing'
+
+    #TODO: one table per experiment-section couple
+    TABLE = 'mock_testing'  
     reset_table(DB=DATABASE, TABLE=TABLE)
+    #TODO: make sure that we have all the columns that we want and that their 
+    # names are exactly what we want
     column_names = ['loss', 'accuracy', 'nb_qbits', 'optimizer', 'optimizer_lr',
                      'ansatz', 'idx', 'seed']
     create_table(DATABASE, TABLE, column_names)
@@ -136,7 +135,7 @@ def main():
     unique_id = access_value(DATABASE, TABLE, 'id', 5)
     some_loss = access_value(DATABASE, TABLE, 'loss', 3)
     print(unique_id)
-    print(some_loss)
+    print(json.loads(some_loss))
 
 
 
