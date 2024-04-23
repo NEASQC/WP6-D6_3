@@ -15,6 +15,8 @@ def create_table(DB, TABLE, col_names):
     conn = sqlite3.connect(DB)
     cursor = conn.cursor()
 
+    col_names = ['id INTEGER PRIMARY KEY'] + col_names
+
     create_table_sql = f"""CREATE TABLE IF NOT EXISTS {TABLE} 
                         ({', '.join(col_names)})"""
     cursor.execute(create_table_sql)
@@ -85,6 +87,11 @@ def mock_extract_hyperparameters_from_dataframe(row) -> Dict:
     return mock_hyperparameters
 
 
+def serialise(series) -> str:
+    pass
+
+
+
 
 def main():
     nb_xps = 1 # the number of experiments (aka rows in the DF)
@@ -95,7 +102,7 @@ def main():
     # and 1 DB for final. They need to be different DB, so total of 3 DB per dataset
     DATABASE = 'neasqc_experiments.db'
     TABLE = 'mock_testing'
-    #reset_table(DB=DATABASE, TABLE=TABLE)
+    reset_table(DB=DATABASE, TABLE=TABLE)
     column_names = ['loss', 'accuracy', 'nb_qbits', 'optimizer', 'optimizer_lr',
                      'ansatz', 'idx', 'seed']
     create_table(DATABASE, TABLE, column_names)
@@ -115,8 +122,8 @@ def main():
                 hyperparameters.update(xp_results)
                 store_data(DB=DATABASE, TABLE=TABLE, data=hyperparameters)
              
-    #val = access_value(DATABASE, TABLE, 'loss', 2)
-    #print(val)
+    val = access_value(DATABASE, TABLE, 'id', 5)
+    print(val)
 
 
 
