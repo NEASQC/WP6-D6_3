@@ -1,4 +1,6 @@
 import sqlite3
+from typing import Dict
+import numpy as np
 
 """
 Let's not write complicated tests for these. Just very basic things like:
@@ -9,155 +11,114 @@ and see whether it fetches it correctly)
 4) Something that I insert is there aftern I'v inserted it (and it wasn't there before)
 """
 
-def create_table(name):
-    """ Connects to the database, or creates it if it doesn't already exist."""
-
-    # Open access to DB
-    conn = sqlite3.connect(name)
+def create_table(DB, TABLE, col_names):
+    conn = sqlite3.connect(DB)
     cursor = conn.cursor()
 
-    # Design SQL query
-    create_table_sql = """
-    CREATE TABLE IF NOT EXISTS quantum_circuits (
-        id INTEGER PRIMARY KEY,
-        nb_qbits INTEGER,
-        nb_layers INTEGER,
-        ansatz TEXT
-    )
-    """
-    # Execute SQL query
+    create_table_sql = f"""CREATE TABLE IF NOT EXISTS {TABLE} 
+                        ({', '.join(col_names)})"""
     cursor.execute(create_table_sql)
 
-    # Close access to DB
     conn.commit()
     conn.close()
 
 
-
-def get_value(column_number, row_number, name):
-    """ Returns the value located at a specific column / row (or None). """
-
-    # Open access to DB
-    conn = sqlite3.connect(name)
-    cursor = conn.cursor()
-
-    # Design SQL query
-    select_sql = f"""
-    SELECT *
-    FROM quantum_circuits
-    ORDER BY id
-    LIMIT 1 OFFSET {row_number - 1}
-    """
-
-    # Execute SQL query
-    cursor.execute(select_sql)
-    result = cursor.fetchone()
-
-    # Close access to DB (no commit because we have not changed it)
-    conn.close()
-
-    return result[column_number] if result else None # Always returns smth
-
-
-
-def insert_data(nb_qbits, nb_layers, ansatz, name):
-    """ Inserts experimental data results into the database."""
-
-    # Open access to DB
-    conn = sqlite3.connect(name)
-    cursor = conn.cursor()
-
-    # Design SQL query
-    insert_sql = """
-    INSERT INTO quantum_circuits (nb_qbits, nb_layers, ansatz)
-    VALUES (?, ?, ?)
-    """
-
-    # Execute SQL query
-    cursor.execute(insert_sql, (nb_qbits, nb_layers, ansatz))
-
-    # Close access to DB
-    conn.commit()
-    conn.close()
-
-
-def reset_table(name):
+def reset_table(DB, TABLE):
     """ Resets the data in the table if it exists, otherwise does nothing. """
 
-    # Open access to DB
-    conn = sqlite3.connect(name)
+    conn = sqlite3.connect(DB)
     cursor = conn.cursor()
 
-    # Check if the table exists
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='quantum_circuits'")
-    table_exists = cursor.fetchone()
+    # BEWARE!!!
+    # the "DROP TABLE" command is extremely dangerous, it deletes ALL the
+    # data contained in that table unretrievably.
+    cursor.execute(f"DROP TABLE {TABLE}")
 
-    if table_exists:
-        # Design SQL query
-        delete_sql = """
-        DELETE FROM quantum_circuits
-        """
+    conn.commit()
+    conn.close()
 
-        # Execute SQL query
-        cursor.execute(delete_sql)
 
-        # Close access to DB
+def access_value(DB, TABLE, col_name, row_nb):
+    conn = sqlite3.connect(DB)
+    cursor = conn.cursor()
+
+    select_sql = f"SELECT {col_name} FROM {TABLE} WHERE rowid = ?"
+    
+    cursor.execute(select_sql, (row_nb,))
+
+    result = cursor.fetchone()
+
+    conn.close() # No commit because we haven't changed anything in the table
+
+    return result[0] if result else None
+
+
+def store_data(DB, TABLE, data):
+        conn = sqlite3.connect(DB)
+        cursor = conn.cursor()
+
+        columns_string = ', '.join(data.keys())
+        placeholders = ', '.join(['?' for _ in range(len(data))])
+        insert_sql = f"INSERT INTO {TABLE} ({columns_string}) VALUES ({placeholders})"
+
+        cursor.execute(insert_sql, tuple(data.values()))
+
         conn.commit()
         conn.close()
 
-        print("Table successfully reset!")
-    else:
-        print("Table does not exist. No action taken.")
 
+def mock_pipeline(hyperparameters) -> Dict:
+    mock_results = {
+        'loss':         0.05,
+        'accuracy':     0.2
+    }
+    return mock_results
+
+
+def mock_extract_hyperparameters_from_dataframe(row) -> Dict:
+    mock_hyperparameters = {
+        'nb_qbits':         5,
+        'optimizer':        'adam',
+        'optimizer_lr':     0.01,
+        'ansatz':           'Sim13'
+    }
+    return mock_hyperparameters
 
 
 
 def main():
-    """
-    Here, since we're not exactly which order data will be stored in, we need to
-     make ABSOLUTELY sure that each row will be unique and recognisable, so for 
-     instance having columns fopr dataset_split AND for random_seed AND for 
-     xp_stage (like preliminary, grd search, final) is a good idea!
+    nb_xps = 1 # the number of experiments (aka rows in the DF)
+    nb_folds = np.arange(2) # the number of fold for our k cross-validation
+    random_seeds = [42, 1984, 23]
 
-     The idea would be to
-        1) Create the table
-        2) Launch the experiments, each run (one set of HP + one split of the 
-        dataset + 1 seed) will be 1 row in the DB.
-        3) The pipeline spits out the results loss/accuracy/etc
-        4) We have some function that acts as glue code: transforms list of HP 
-        + split of dataset + seed + results of pipeline into something like the 
-        DATA here.
-        5) Write one row of DATA (corresponding to that one run) to the table
-    """
+    # Here there will need to be 1 DB for preliminary, 1 DB for full grid search 
+    # and 1 DB for final. They need to be different DB, so total of 3 DB per dataset
+    DATABASE = 'neasqc_experiments.db'
+    TABLE = 'mock_testing'
+    #reset_table(DB=DATABASE, TABLE=TABLE)
+    column_names = ['loss', 'accuracy', 'nb_qbits', 'optimizer', 'optimizer_lr',
+                     'ansatz', 'idx', 'seed']
+    create_table(DATABASE, TABLE, column_names)
 
-    #STEP 1 here
-    table_name = 'experimental_results'
+    for row in range(nb_xps):
+        # This is what we need to get from the big pandas dataframe
+        hyperparameters = mock_extract_hyperparameters_from_dataframe(row)
 
-    reset_table(name=table_name) # If you want to start off fresh, uncomment this line
+        for fold_index in nb_folds:
+            hyperparameters['idx'] = fold_index
 
-    create_table(name=table_name) # Only created if it doesn't exist, otherwise appends
+            for seed in random_seeds:
+                hyperparameters['seed'] = seed
+                xp_results = mock_pipeline(hyperparameters)
+                # It's easier to feed one dict into the next function and cheap 
+                # so we merge them
+                hyperparameters.update(xp_results)
+                store_data(DB=DATABASE, TABLE=TABLE, data=hyperparameters)
+             
+    #val = access_value(DATABASE, TABLE, 'loss', 2)
+    #print(val)
 
-    # STEP 2 here
 
-    # STEP 3 here
-    data = [
-        (4, 3, 'Sim14'),
-        (5, 2, 'Sim13'),
-        (3, 4, 'StronglyEntangling'),
-        (6, 2, 'Sim13'),
-    ]
-
-    # STEP 4 here 
-
-    # STEP 5 here
-    for d in data:
-        insert_data(*d, name=table_name)
-
-    # Example :
-    column_number = 3  # Example: 1 for nb_qbits, 2 for nb_layers, 3 for ansatz
-    row_number = 2  # Example: 2 for the second row
-    value = get_value(column_number, row_number, name=table_name)
-    print(f"The value at column {column_number} and row {row_number} is: {value}")
 
 if __name__ == "__main__":
     main()
