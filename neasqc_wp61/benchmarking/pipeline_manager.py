@@ -71,8 +71,8 @@ def store_data(DB, TABLE, data):
 
 def mock_pipeline(hyperparameters) -> Dict:
     mock_results = {
-        'loss':         0.05,
-        'accuracy':     0.2
+        'loss':         np.ones(5)*42.2,
+        'accuracy':     np.ones(5)*19.84
     }
     return mock_results
 
@@ -87,8 +87,20 @@ def mock_extract_hyperparameters_from_dataframe(row) -> Dict:
     return mock_hyperparameters
 
 
+def serialise_results(unserialised_results) -> Dict:
+    # TODO: this but for every serial value we get from the results
+    # TODO: make sure we feed a dict with only serial values
+    serialised_loss = serialise(unserialised_results['loss'])
+    serialised_accuracy = serialise(unserialised_results['accuracy'])
+    results = {
+        'loss':         serialised_loss,
+        'accuracy':     serialised_accuracy
+    }
+    return results
+
+
 def serialise(series) -> str:
-    pass
+    return np.array2string(series, separator=',').strip('[]')
 
 
 
@@ -117,13 +129,15 @@ def main():
             for seed in random_seeds:
                 hyperparameters['seed'] = seed
                 xp_results = mock_pipeline(hyperparameters)
-                # It's easier to feed one dict into the next function and cheap 
-                # so we merge them
-                hyperparameters.update(xp_results)
+                serialised_xp_results = serialise_results(xp_results)
+                hyperparameters.update(serialised_xp_results)
                 store_data(DB=DATABASE, TABLE=TABLE, data=hyperparameters)
              
-    val = access_value(DATABASE, TABLE, 'id', 5)
-    print(val)
+    unique_id = access_value(DATABASE, TABLE, 'id', 5)
+    some_loss = access_value(DATABASE, TABLE, 'loss', 3)
+    print(unique_id)
+    print(some_loss)
+
 
 
 
