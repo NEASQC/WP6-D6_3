@@ -1,3 +1,12 @@
+"""
+Let's not write complicated tests for these. Just very basic things like:
+1) After I create a table, it's there (and it wasn't there before)
+2) When I retrieve data from the table, it's the correct row/col (hardcode smth 
+and see whether it fetches it correctly)
+3) If I ask for a row/col that's not there, I do get None
+4) Something that I insert is there aftern I'v inserted it (and it wasn't there before)
+"""
+
 import sqlite3
 from typing import Dict
 import numpy as np
