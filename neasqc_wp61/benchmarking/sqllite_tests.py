@@ -64,15 +64,34 @@ class TestDatabaseQueries(unittest.TestCase):
 
     
     def test_table_creation_has_all_wanted_rows(self):
-        # I create a table with a certain set of rows
-        # It contains all of those rows
-        # It doesn't contain any other rows
-        pass
+        some_cols = [('animal', 'TEXT'), 
+                    ('population', 'INT'), 
+                    ('avg_weight', 'REAL')
+                    ]
 
-    def test_table_creation_has_correct_types_for_each_row(self):
-        # I create a table with a certain set of rows
-        # Each row has the type I specified when creating
-        pass
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+
+        # Create the table
+        create_table(DB=DATABASE, TABLE=TABLE, col_definitions=some_cols)
+
+        # Get all the columns from the created table
+        query_columns = f"PRAGMA table_info('{TABLE}')"
+        cursor.execute(query_columns)
+        query_result = cursor.fetchall()
+
+        # I have all the columns I asked for and they're of correct type
+        for i in range(3):
+            db_row = query_result[i]
+            self.assertEqual(db_row[1], some_cols[i][0])
+            self.assertEqual(db_row[2], some_cols[i][1])
+
+        # And there are no extra columns that have popped up
+        self.assertEqual(len(table_columns), len(some_cols))
+
+        conn.close()
+
+        
 
     def test_inserting_a_full_row_is_successful_and_correct(self):
         # I insert data to populate a row
