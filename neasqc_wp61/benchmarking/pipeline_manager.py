@@ -47,6 +47,10 @@ def reset_table(DB, TABLE):
 
 
 def access_value(DB, TABLE, col_name, row_nb):
+    """ NOTE: This is only an example of how to access something in the table, does 
+    not need to be tested because will not be used in the code per se. We'll 
+    use SQL requests instead (from command line)."""
+
     conn = sqlite3.connect(DB)
     cursor = conn.cursor()
 
