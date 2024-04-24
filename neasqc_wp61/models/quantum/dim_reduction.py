@@ -5,8 +5,9 @@ Module containing the base class for performing dimensionality reduction.
 
 """
 
-import numpy as np
 import os
+
+import numpy as np
 import pandas as pd
 import sklearn.decomposition as skd
 import sklearn.manifold as skm
@@ -53,7 +54,7 @@ class DimReduction(ABC):
             except KeyError:
                 raise KeyError("Sentence vectors not present in the fit data.")
 
-        raise NotImplementedError("Suclasses must implement the fit method.")
+        raise NotImplementedError("Subclasses must implement the fit method.")
 
     @abstractmethod
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
@@ -118,8 +119,8 @@ class PCA(DimReduction):
         dim_out : int
             Desired output dimension of the vectors.
         **kwargs
-            Arguments passed to the sklearn.decomposition.PCA object.
-            They can be found in
+            Arguments passed to the sklearn.decomposition.PCA object
+            that can be found in
             https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html.
         """
         super().__init__(dim_out=dim_out)
@@ -143,18 +144,18 @@ class PCA(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        X = np.stack(embeddings_to_fit)
-        self.pca_sk.fit(X)
+        embeddings_to_fit = np.stack(embeddings_to_fit)
+        self.pca_sk.fit(embeddings_to_fit)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
         Reduces the embeddings in the input dataframe with the fitted
         PCA.
         """
-        reduced_data = data_to_reduce.copy()
+        reduced_data = data_to_reduce
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        X = np.stack(embeddings_to_reduce)
-        sentence_vectors_reduced = self.pca_sk.transform(X)
+        embeddings_to_reduce = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.pca_sk.transform(embeddings_to_reduce)
         reduced_vectors_list = sentence_vectors_reduced.tolist()
         reduced_vectors_list = [
             np.array(vec, dtype=np.float32) for vec in reduced_vectors_list
@@ -203,18 +204,18 @@ class ICA(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        X = np.stack(embeddings_to_fit)
-        self.ica_sk.fit(X)
+        embeddings_to_fit = np.stack(embeddings_to_fit)
+        self.ica_sk.fit(embeddings_to_fit)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
         Reduces the embeddings in the input dataframe with the fitted
         ICA.
         """
-        reduced_data = data_to_reduce.copy()
+        reduced_data = data_to_reduce
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        X = np.stack(embeddings_to_reduce)
-        sentence_vectors_reduced = self.ica_sk.transform(X)
+        embeddings_to_reduce = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.ica_sk.transform(embeddings_to_reduce)
         reduced_vectors_list = sentence_vectors_reduced.tolist()
         reduced_vectors_list = [
             np.array(vec, dtype=np.float32) for vec in reduced_vectors_list
@@ -263,18 +264,18 @@ class TSVD(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        X = np.stack(embeddings_to_fit)
-        self.tsvd_sk.fit(X)
+        embeddings_to_fit = np.stack(embeddings_to_fit)
+        self.tsvd_sk.fit(embeddings_to_fit)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
         Reduces the embeddings in the input dataframe with the fitted
         TSVD.
         """
-        reduced_data = data_to_reduce.copy()
+        reduced_data = data_to_reduce
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        X = np.stack(embeddings_to_reduce)
-        sentence_vectors_reduced = self.tsvd_sk.transform(X)
+        embeddings_to_reduce = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.tsvd_sk.transform(embeddings_to_reduce)
         reduced_vectors_list = sentence_vectors_reduced.tolist()
         reduced_vectors_list = [
             np.array(vec, dtype=np.float32) for vec in reduced_vectors_list
@@ -323,18 +324,18 @@ class UMAP(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        X = np.stack(embeddings_to_fit)
-        self.umap_sk.fit(X)
+        embeddings_to_fit = np.stack(embeddings_to_fit)
+        self.umap_sk.fit(embeddings_to_fit)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
         Reduces the embeddings in the input dataframe with the fitted
         ICA.
         """
-        reduced_data = data_to_reduce.copy()
+        reduced_data = data_to_reduce
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        X = np.stack(embeddings_to_reduce)
-        sentence_vectors_reduced = self.umap_sk.transform(X)
+        embeddings_to_reduce = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.umap_sk.transform(embeddings_to_reduce)
         reduced_vectors_list = sentence_vectors_reduced.tolist()
         reduced_vectors_list = [
             np.array(vec, dtype=np.float32) for vec in reduced_vectors_list
@@ -385,18 +386,18 @@ class TSNE(DimReduction):
             raise ValueError(
                 "Invalid input type. Expecting pd.DataFrame or list[pd.DataFrame]."
             )
-        X = np.stack(embeddings_to_fit)
-        self.tsne_sk.fit(X)
+        embeddings_to_fit = np.stack(embeddings_to_fit)
+        self.tsne_sk.fit(embeddings_to_fit)
 
     def reduce_dimension(self, data_to_reduce: pd.DataFrame) -> pd.DataFrame:
         """
         Reduces the embeddings in the input dataframe with the fitted
         TSNE.
         """
-        reduced_data = data_to_reduce.copy()
+        reduced_data = data_to_reduce
         embeddings_to_reduce = data_to_reduce["sentence_vectorised"].to_numpy()
-        X = np.stack(embeddings_to_reduce)
-        sentence_vectors_reduced = self.tsne_sk.transform(X)
+        embeddings_to_reduce = np.stack(embeddings_to_reduce)
+        sentence_vectors_reduced = self.tsne_sk.transform(embeddings_to_reduce)
         reduced_data["reduced_sentence_vector"] = (
             sentence_vectors_reduced.tolist()
         )
