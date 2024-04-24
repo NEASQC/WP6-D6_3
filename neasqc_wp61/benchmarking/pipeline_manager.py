@@ -66,7 +66,7 @@ def store_data(DB, TABLE, data):
         conn.close()
 
 
-def mock_pipeline(hyperparameters) -> Dict:
+def mock_pipeline(hyperparameters) -> Dict: #TODO : replace by real stuff
     mock_results = {
         'loss':         np.ones(5)*42.2,
         'accuracy':     np.ones(5)*19.84
@@ -74,7 +74,7 @@ def mock_pipeline(hyperparameters) -> Dict:
     return mock_results
 
 
-def mock_extract_hyperparameters_from_dataframe(row) -> Dict:
+def mock_extract_hyperparameters_from_dataframe(row) -> Dict: #TODO : replace by real stuff
     mock_hyperparameters = {
         'nb_qbits':         5,
         'optimizer':        'adam',
@@ -113,7 +113,7 @@ def main():
     #TODO: make sure that we have all the columns that we want and that their 
     # names are exactly what we want
     column_defs = [
-    ('id', 'INTEGER PRIMARY KEY'), #TODO: move this to table creation so it's ensured to always be there
+    ('id', 'INTEGER PRIMARY KEY'), # NOTE: ensure it stays there, always!
     ('loss', 'JSON'), #Note: important that it's JSON and not text for the extra functionalities
     ('accuracy', 'JSON'),
     ('nb_qbits', 'INT'),
@@ -134,11 +134,12 @@ def main():
 
             for seed in random_seeds:
                 hyperparameters['seed'] = seed
-                xp_results = mock_pipeline(hyperparameters)
+                xp_results = mock_pipeline(hyperparameters) #TODO: replace by actual call to real pipeline
                 serialised_xp_results = serialise_results(xp_results)
                 hyperparameters.update(serialised_xp_results)
                 store_data(DB=DATABASE, TABLE=TABLE, data=hyperparameters)
-             
+
+    # TODO: remove, these are just examples
     unique_id = access_value(DATABASE, TABLE, 'id', 5)
     some_loss = access_value(DATABASE, TABLE, 'loss', 3)
     print(unique_id)
