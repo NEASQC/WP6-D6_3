@@ -4,10 +4,11 @@ from pipeline_manager import create_table
 
 # This is an ugly global variable, yes, I know...
 DATABASE = 'neasqc_experiments.db'
+TABLE = 'test_table'
 
 class TestDatabaseQueries(unittest.TestCase):
 
-    def tear_down(self, TABLE):
+    def tearDown(self):
         """ Delete the table from the DB."""
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -19,7 +20,7 @@ class TestDatabaseQueries(unittest.TestCase):
         conn.close()
         
 
-    def setup(self):
+    def setUp(self):
         """ Create the table in the DB. """
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -34,85 +35,51 @@ class TestDatabaseQueries(unittest.TestCase):
         conn.close()
 
 
-
-
-    def test_table_creation_is_succesful(self):
-        some_table = 'test_table'
+    def test_table_creation_is_successful(self):
         some_cols = [('animal', 'TEXT'), ('population', 'INT')]
-        
+
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
-        # Query which tests the existence of said table in the DB
-        query =   f"""    SELECT 1 FROM sqlite_master 
-                            WHERE type='table' AND name={some_table};
-                    """
+        # Query to test for absence/presence
+        query = f"""SELECT 1 FROM sqlite_master 
+                            WHERE type='table' AND name='{TABLE}';
+                        """
 
-        # The table doesn't exist before I create it
-        with self.assertRaises(sqlite3.OperationalError):
-            cursor.execute(query)
-        
+        # There should be no table before I create it
+        cursor.execute(query)
+        response_pre_creation = cursor.fetchone()
+        self.assertIsNone(response_pre_creation)
+
         # I create the table
-        create_table(DB=DATABASE, TABLE=some_table, col_definitions=some_cols)
+        create_table(DB=DATABASE, TABLE=TABLE, col_definitions=some_cols)
 
-        # The table now exists
-        response_post_creation = cursor.execute(query)
-        assert response_post_creation == 1
+        # There should be a table after I create it
+        cursor.execute(query)
+        response_post_creation = cursor.fetchone()
+        self.assertEqual(response_post_creation, (1,))
 
-        tear_down(some_table)
+        conn.close()
+
+
     
-
     def test_table_creation_has_all_wanted_rows(self):
-        TABLE = 'test_table'
         # I create a table with a certain set of rows
         # It contains all of those rows
         # It doesn't contain any other rows
-        tear_down(TABLE)
         pass
 
     def test_table_creation_has_correct_types_for_each_row(self):
-        TABLE = 'test_table'
         # I create a table with a certain set of rows
         # Each row has the type I specified when creating
-        tear_down(TABLE)
         pass
 
-    def test_inserting_a_full_row_is_succesfull_and_correct(self):
-        TABLE = 'test_table'
+    def test_inserting_a_full_row_is_successful_and_correct(self):
         # I insert data to populate a row
         # All the specified rows are populated
         # The values in each of them is correct
-        tear_down(TABLE)
         pass
 
-
-
-# import sqlite3
-
-# # Connect to the SQLite database
-# conn = sqlite3.connect('your_database.db')
-
-# # Create a cursor object
-# cursor = conn.cursor()
-
-# # Execute the SQL query
-# cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='my_table'")
-
-# # Fetch the result (if any)
-# result = cursor.fetchone()
-
-# # Check if the result is not None (i.e., table exists)
-# if result:
-#     print("Table 'my_table' exists")
-# else:
-#     print("Table 'my_table' does not exist")
-
-# # Close the cursor and connection
-# cursor.close()
-# conn.close()
-
-
-# What happens if I want to add stuff to a column that doesnt exist?
 
 if __name__ == '__main__':
     unittest.main()
