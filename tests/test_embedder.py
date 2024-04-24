@@ -51,7 +51,7 @@ def random_dataset_sample(dataset: pd.DataFrame, nrows: int) -> pd.DataFrame:
     return random_subset
 
 
-def check_dimension(
+def check_dimension_is_correct(
     vectors: list, is_sentence_embedding: bool, dim: int
 ) -> bool:
     """
@@ -92,7 +92,7 @@ def check_dimension(
     return True
 
 
-def check_sentence_embedding_type(x: list) -> bool:
+def check_sentence_embedding_type_is_correct(x: list) -> bool:
     """
     Checks if a list consists of elements of type
     np.ndarray[np.float32], the expected type for a sentence embedding.
@@ -115,7 +115,7 @@ def check_sentence_embedding_type(x: list) -> bool:
     return False
 
 
-def check_word_embedding_type(x: list) -> bool:
+def check_sentence_word_type_is_correct(x: list) -> bool:
     """
     Checks if a list consists of elements of type
     list[np.ndarray[np.float32]], the expected type for a word
@@ -247,7 +247,7 @@ class TestEmbedder(unittest.TestCase):
                     )
 
                 self.assertTrue(
-                    check_dimension(
+                    check_dimension_is_correct(
                         vectors, embedder.is_sentence_embedding, dim
                     )
                 )
@@ -263,7 +263,7 @@ class TestEmbedder(unittest.TestCase):
                 vectorised_df = embedder.dataset
                 vectors = vectorised_df["sentence_vectorised"]
                 self.assertTrue(
-                    check_dimension(
+                    check_dimension_is_correct(
                         vectors, embedder.is_sentence_embedding, embedder.dim
                     )
                 )
@@ -290,9 +290,13 @@ class TestEmbedder(unittest.TestCase):
                 vectors = saved_df["sentence_vectorised"].to_list()
 
                 if embedder.is_sentence_embedding:
-                    self.assertTrue(check_sentence_embedding_type(vectors))
+                    self.assertTrue(
+                        check_sentence_embedding_type_is_correct(vectors)
+                    )
                 else:
-                    self.assertTrue(check_word_embedding_type(vectors))
+                    self.assertTrue(
+                        check_sentence_word_type_is_correct(vectors)
+                    )
 
     def testSentenceEmbeddingsForAGivenSentenceAreDifferentForDifferentEmbeddingTypes(
         self,
