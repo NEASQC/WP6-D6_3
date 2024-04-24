@@ -14,7 +14,7 @@ def create_table(DB, TABLE, col_definitions)-> None: #NOTE: actual code to be ke
     col_definitions = [' '.join(col_def) for col_def in col_definitions]
 
     create_table_sql = f"""CREATE TABLE IF NOT EXISTS {TABLE} 
-                        ({', '.join(col_definitions)})"""
+                        ({', '.join(col_definitions)});"""
     cursor.execute(create_table_sql)
 
     conn.commit()
@@ -32,7 +32,7 @@ def store_data(DB, TABLE, data:Dict) -> None: #NOTE: actual code to be kept
     columns_string = ', '.join(data.keys())
     data_values_placeholders = ', '.join(['?' for _ in range(len(data))])
     insert_sql = f"""INSERT INTO {TABLE} ({columns_string}) 
-                VALUES ({data_values_placeholders})"""
+                VALUES ({data_values_placeholders});"""
 
     cursor.execute(insert_sql, tuple(data.values()))
 
