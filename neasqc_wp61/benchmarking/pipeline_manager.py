@@ -45,6 +45,7 @@ def serialise_results(unserialised_results:Dict) -> Dict:
     arrays and returns the same dictionary structure but where the values have 
     been converted to json.
     """
+    # TODO: should be tested by being fed a dictionary and checking that it does serialise it
     # TODO: this but for every serial value we get from the results
     # TODO: make sure we feed a dict with only serial values
     serialised_loss = json.dumps(unserialised_results['loss'].tolist())
@@ -131,7 +132,7 @@ def main():
 
     #TODO: one table per experiment-section couple
     TABLE = 'mock_testing'  #TODO: change once ALL testing is done
-    reset_table(DB=DATABASE, TABLE=TABLE) # TODO: remove, this will not be part of our proper code
+    #reset_table(DB=DATABASE, TABLE=TABLE) # TODO: remove, this will not be part of our proper code
     #TODO: make sure that we have all the columns that we want and that their 
     # names are exactly what we want
     # NOTE : once set, the strcuture of the table (columns) should NOT be 
