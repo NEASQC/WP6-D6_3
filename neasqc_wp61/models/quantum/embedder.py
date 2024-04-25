@@ -68,24 +68,32 @@ class Embedder(ABC):
             dataset. True is for sentence embedding, False is for word
             embedding.
         """
+        if not isinstance(dataset, pd.DataFrame):
+            raise TypeError("dataset must be a Pandas DataFrame.")
         self.dataset = dataset
+        if not isinstance(is_sentence_embedding, bool):
+            raise TypeError("is_sentence_embedding must be a boolean")
         self.is_sentence_embedding = is_sentence_embedding
         self.embeddings_computed = False
 
     @abstractmethod
     def _compute_embeddings(
         self,
-    ) -> Union[list[list[float]], list[list[list[float]]]]:
+    ) -> Union[
+        list[np.ndarray[np.float32]],
+        list[list[np.ndarray[np.float32]]],
+    ]:
         """
         Private method. Computes vector embeddings for sentences in a
         dataset.
 
         Returns
         -------
-        Union[list[list[float]], list[list[list[float]]]]
-            A list containing the vectorised representation of the
-            sentences in the dataset. A list of floats in the case of a
-            sentence embedding, and a list of float lists in the case of
+        Union[ list[np.ndarray[np.float32]],
+        list[list[np.ndarray[np.float32]] ]
+            An list containing the vectorised representation of the
+            sentences in the dataset. A list of arrays in the case of a
+            sentence embedding, and a list of array lists in the case of
             word embeddings.
 
         Raises
@@ -97,9 +105,12 @@ class Embedder(ABC):
             "Subclasses must implement _compute_embeddings method."
         )
 
-    @abstractmethod
     def _add_embeddings_to_dataset(
-        self, embeddings: Union[list[list[float]], list[list[list[float]]]]
+        self,
+        embeddings: Union[
+            list[np.ndarray[np.float32]],
+            list[list[np.ndarray[np.float32]]],
+        ],
     ) -> None:
         """
         Private method. Adds the calculated sentence vectors to a new
@@ -107,8 +118,9 @@ class Embedder(ABC):
 
         Parameters
         ----------
-        embeddings: Union[list[list[float]], list[list[list[float]]]]
-            The embeddings to be added to the dataset.
+        embeddings: Union[ list[np.ndarray[np.float32]],
+        list[list[np.ndarray[np.float32]]]
+            The list of embeddings to be added to the dataset.
 
         Raises
         ------
@@ -126,24 +138,19 @@ class Embedder(ABC):
                 "compute_embeddings must be called before add_embeddings_to_dataset"
             )
         if not isinstance(embeddings, list):
-            raise TypeError("embeddings must be of type list")
-        raise NotImplementedError(
-            "Subclasses must implement _add_embedding_to_dataset method."
-        )
+            raise TypeError("embeddings must be stored in a list")
+        self.dataset["sentence_vectorised"] = embeddings
 
-    @abstractmethod
     def vectorise_dataset(self) -> None:
         """
         Computes the embeddings and adds them to the dataset.
         """
-        raise NotImplementedError(
-            "Subclasses must implement vectorise_dataset method."
-        )
+        embeddings = self._compute_embeddings()
+        self._add_embeddings_to_dataset(embeddings)
 
-    @abstractmethod
     def save_embedding_dataset(self, path: str, filename: str) -> None:
         """
-        Saves the dataset containing the embeddings as a TSV file.
+        Saves the dataset containing the embeddings as a pickle file.
 
         Parameters
         ----------
@@ -153,8 +160,8 @@ class Embedder(ABC):
             include a / at the end).
         filename: str
             The name with which the generated dataset containing the
-            embeddings will be saved (it should not include .csv or any
-            other file extension).
+            embeddings will be saved (it should not include .pkl or
+            any other file extension).
 
         Raises
         ------
@@ -172,9 +179,7 @@ class Embedder(ABC):
                 "You must call compute_embeddings to create the embeddings and then add them "
                 "to the dataset with add_embedding_dataset before attempting to save the dataset."
             )
-        raise NotImplementedError(
-            "Subclasses must implement save_embedding_dataset method."
-        )
+        self.dataset.to_pickle(os.path.join(path, filename) + ".pkl")
 
 
 class Bert(Embedder):
@@ -187,7 +192,7 @@ class Bert(Embedder):
         dataset: DataFrame,
         is_sentence_embedding: bool = True,
         cased: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Initialises the BERT embedder class
@@ -214,9 +219,10 @@ class Bert(Embedder):
         self.cased = cased
         self.kwargs = kwargs
 
-    def _compute_embeddings(
-        self, **kwargs
-    ) -> Union[list[list[float]], list[list[list[float]]]]:
+    def _compute_embeddings(self, **kwargs) -> Union[
+        list[np.ndarray[np.float32]],
+        list[list[np.ndarray[np.float32]]],
+    ]:
         """
         Private method. Creates BERT embeddings for sentences in a
         dataset and adds them to a new column in the dataset.
@@ -259,9 +265,7 @@ class Bert(Embedder):
                         .detach()
                         .numpy()
                     )
-                vectorised_sentence_list.append(
-                    [tensor.item() for tensor in sentence_embedding]
-                )
+                vectorised_sentence_list.append(sentence_embedding)
 
         else:
             vectorised_sentence_list = []
@@ -281,52 +285,11 @@ class Bert(Embedder):
                             .numpy()
                         )
 
-                    sentence_word_embeddings.append(word_embedding.tolist())
+                    sentence_word_embeddings.append(word_embedding)
                 vectorised_sentence_list.append(sentence_word_embeddings)
 
         self.embeddings_computed = True
-
         return vectorised_sentence_list
-
-    def _add_embeddings_to_dataset(
-        self, embeddings: Union[list[list[float]], list[list[list[float]]]]
-    ) -> None:
-        """
-        Private method. Adds the calculated BERT embeddings to a new
-        column in our dataset.
-
-        Parameters
-        ----------
-        embeddings: list
-            A list of the embeddings corresponding to the sentences in
-            the dataset.
-        """
-        self.dataset["sentence_vectorised"] = embeddings
-
-    def vectorise_dataset(self) -> None:
-        """
-        Computes the BERT embeddings and adds them to the dataset.
-        """
-        embeddings = self._compute_embeddings()
-        self._add_embeddings_to_dataset(embeddings)
-
-    def save_embedding_dataset(self, path: str, filename: str) -> None:
-        """
-        Saves the dataset containing the BERT embeddings as a TSV file.
-
-        Parameters
-        ----------
-        path : str
-            The path to the location where the user wishes to save the
-            generated dataset containing the embeddings.
-        filename: str
-            The name with which the generated dataset containing the
-            embeddings will be saved (it should not include .csv or any
-            other file extension).
-        """
-        self.dataset.to_csv(
-            os.path.join(path, filename) + ".tsv", index=False, sep="\t"
-        )
 
 
 class FastText(Embedder):
@@ -339,7 +302,7 @@ class FastText(Embedder):
         dataset: DataFrame,
         is_sentence_embedding: bool = True,
         dim: int = 300,
-        cased: bool = True,
+        cased: bool = False,
     ) -> None:
         """
         Initialises the FastText embedder class
@@ -378,7 +341,10 @@ class FastText(Embedder):
 
     def _compute_embeddings(
         self,
-    ) -> Union[list[list[float]], list[list[list[float]]]]:
+    ) -> Union[
+        list[np.ndarray[np.float32]],
+        list[list[np.ndarray[np.float32]]],
+    ]:
         """
         Private method. Creates FastText embeddings for sentences in a
         dataset and adds them to a new column in the dataset.
@@ -386,8 +352,8 @@ class FastText(Embedder):
         Returns
         -------
         vectorised_sentence_list: list
-            A list containing the vector embeddings corresponding to the
-            sentences in the dataset.
+            A list containing the vector embeddings corresponding to
+            the sentences in the dataset.
         """
         ftu.download_model("en", if_exists="ignore")
         model = ft.load_model("cc.en.300.bin")
@@ -401,9 +367,7 @@ class FastText(Embedder):
             for sentence in embeddings_df.sentence.values:
                 if not self.cased:
                     sentence = sentence.casefold()
-                sentence_embedding = model.get_sentence_vector(
-                    sentence
-                ).tolist()
+                sentence_embedding = model.get_sentence_vector(sentence)
                 vectorised_sentence_list.append(sentence_embedding)
 
         else:
@@ -411,54 +375,13 @@ class FastText(Embedder):
             for sentence in embeddings_df.sentence.values:
                 word_embeddings_list = []
                 for word in sentence.split():
-                    word_embedding = model.get_word_vector(word).tolist()
+                    word_embedding = model.get_word_vector(word)
                     word_embeddings_list.append(word_embedding)
                 vectorised_sentence_list.append(word_embeddings_list)
 
         self.embeddings_computed = True
 
         return vectorised_sentence_list
-
-    def _add_embeddings_to_dataset(
-        self, embeddings: Union[list[list[float]], list[list[list[float]]]]
-    ) -> None:
-        """
-        Private method. Adds the calculated FastText embeddings to a new
-        column in our dataset.
-
-        Parameters
-        ----------
-        embeddings: list
-            A list of the embeddings corresponding to the sentences in
-            the dataset.
-        """
-        self.dataset["sentence_vectorised"] = embeddings
-
-    def vectorise_dataset(self) -> None:
-        """
-        Computes the FastText embeddings and adds them to the dataset.
-        """
-        embeddings = self._compute_embeddings()
-        self._add_embeddings_to_dataset(embeddings)
-
-    def save_embedding_dataset(self, path: str, filename: str) -> None:
-        """
-        Saves the dataset containing the FastText embeddings as a TSV
-        file.
-
-        Parameters
-        ----------
-        path : str
-            The path to the location where the user wishes to save the
-            generated dataset containing the embeddings.
-         filename: str
-            The name with which the generated dataset containing the
-            embeddings will be saved (it should not include .csv or any
-            other file extension).
-        """
-        self.dataset.to_csv(
-            os.path.join(path, filename) + ".tsv", index=False, sep="\t"
-        )
 
 
 class Ember(Embedder):
@@ -488,7 +411,10 @@ class Ember(Embedder):
 
     def _compute_embeddings(
         self,
-    ) -> Union[list[list[float]], list[list[list[float]]]]:
+    ) -> Union[
+        list[np.ndarray[np.float32]],
+        list[list[np.ndarray[np.float32]]],
+    ]:
         """
         Private method. Creates ember-v1 embeddings for sentences in a
         dataset and adds them as a new column in the dataset.
@@ -496,8 +422,8 @@ class Ember(Embedder):
         Returns
         -------
         vectorised_sentence_list: list
-            A list containing the vector embeddings corresponding to the
-            sentences in the dataset.
+            A list containing the vector embeddings corresponding to
+            the sentences in the dataset.
         """
         embeddings_df = self.dataset.copy()
         embeddings_df.columns = ["class", "sentence", "sentence_structure"]
@@ -506,56 +432,22 @@ class Ember(Embedder):
         sentences = embeddings_df.sentence.values.tolist()
 
         if self.is_sentence_embedding:
-            vectorised_sentence_list = model.encode(sentences).tolist()
+            vectorised_sentence_array = model.encode(
+                sentences, convert_to_numpy=True
+            )
+            vectorised_sentence_list = [
+                array.flatten() for array in vectorised_sentence_array
+            ]
 
         else:
             vectorised_sentence_list = []
             for sentence in sentences:
                 word_embeddings_list = []
                 for word in sentence.split():
-                    word_embedding = model.encode(word).tolist()
+                    word_embedding = model.encode(word, convert_to_numpy=True)
                     word_embeddings_list.append(word_embedding)
                 vectorised_sentence_list.append(word_embeddings_list)
 
         self.embeddings_computed = True
 
         return vectorised_sentence_list
-
-    def _add_embeddings_to_dataset(self, embeddings) -> None:
-        """
-        Private method. Adds the calculated ember-v1 embeddings to a new
-        column in our dataset.
-
-        Parameters
-        ----------
-        embeddings: list
-            A list of the embeddings corresponding to the sentences in
-            the dataset.
-        """
-        self.dataset["sentence_vectorised"] = embeddings
-
-    def vectorise_dataset(self) -> None:
-        """
-        Computes the ember-v1 embeddings and adds them to the dataset.
-        """
-        embeddings = self._compute_embeddings()
-        self._add_embeddings_to_dataset(embeddings)
-
-    def save_embedding_dataset(self, path: str, filename: str) -> None:
-        """
-        Saves the dataset containing the ember-v1 embeddings as a TSV
-        file.
-
-        Parameters
-        ----------
-        path : str
-            The path to the location where the user wishes to save the
-            generated dataset containing the embeddings.
-         filename: str
-            The name with which the generated dataset containing the
-            embeddings will be saved (it should not include .csv or any
-            other file extension).
-        """
-        self.dataset.to_csv(
-            os.path.join(path, filename) + ".tsv", index=False, sep="\t"
-        )
