@@ -1,6 +1,8 @@
 import sqlite3
 import unittest
-from pipeline_manager import create_table
+from pipeline_manager import create_table, store_data
+from json import dumps
+from numpy import ones
 
 # This is an ugly global variable, yes, I know...
 DATABASE = 'neasqc_experiments.db'
@@ -69,35 +71,50 @@ class TestDatabaseQueries(unittest.TestCase):
                     ('avg_weight', 'REAL')
                     ]
 
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-
         # Create the table
         create_table(DB=DATABASE, TABLE=TABLE, col_definitions=some_cols)
 
         # Get all the columns from the created table
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
         query_columns = f"PRAGMA table_info('{TABLE}')"
         cursor.execute(query_columns)
         query_result = cursor.fetchall()
 
-        # I have all the columns I asked for and they're of correct type
+        # Check that I have all the columns I asked for and their type is ok
         for i in range(3):
             db_row = query_result[i]
             self.assertEqual(db_row[1], some_cols[i][0])
             self.assertEqual(db_row[2], some_cols[i][1])
 
         # And there are no extra columns that have popped up
-        self.assertEqual(len(table_columns), len(some_cols))
+        self.assertEqual(len(query_result), len(some_cols))
 
         conn.close()
 
         
 
     def test_inserting_a_full_row_is_successful_and_correct(self):
-        # I insert data to populate a row
-        # All the specified rows are populated
-        # The values in each of them is correct
-        pass
+        values = ('apple', 1984, 4.2, dumps(ones(5).tolist()))
+        data = {'FRUIT_NAME': values[0],
+                'QUANTITY': values[1],
+                'PRICE_PER_KG': values[2],
+                'GROWTH_HISTORY': values[3]
+                }
+
+        store_data(DB=DATABASE, TABLE='basic', data=data)
+
+        #Check that the new data has been added and is correct
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        query = f"SELECT * FROM basic LIMIT 1 OFFSET 0"
+        cursor.execute(query)
+        query_result = cursor.fetchall()
+
+        # Check that the values used to populate table are indeed there
+        for i in range(len(values)):
+            self.assertEqual(query_result[0][i], values[i])
+        
 
 
 if __name__ == '__main__':
