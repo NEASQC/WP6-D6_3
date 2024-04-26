@@ -91,9 +91,11 @@ class NewAlphaModel(ABC, torch.nn.Module):
         self.data_loader_val = DataLoader(
             Dataset(sentence_vectors[1], labels[1]), batch_size=batch_size
         )
+        """
         self.data_loader_test = DataLoader(
             Dataset(sentence_vectors[2], labels[2]), batch_size=batch_size
         )
+        """
         self.n_classes = n_classes
         self.circuit = circuit
         self.optimiser = optimiser
@@ -190,8 +192,12 @@ class NewAlphaModel(ABC, torch.nn.Module):
                     vector = vector.to(self.device)
                     label = label.to(self.device)
                     opt.zero_grad()
+                    print(self.forward(vector))
+                    print("--------------------")
+                    print(label)
+                    print("--------------------")
                     batch_loss = self.loss_function(
-                        self.forward(vector), label
+                        self.forward(vector), label.long()
                     )
                     loss_epoch_train_val[i] += (
                         batch_loss.item() * vector.shape[0]
