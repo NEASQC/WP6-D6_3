@@ -18,7 +18,8 @@ sys.path.append(embedder_path)
 import embedder as emb
 
 dataset_path = (
-    current_path + "/../neasqc_wp61/data/datasets/amazonreview_train.tsv"
+    current_path
+    + "/../neasqc_wp61/data/datasets/reduced_amazonreview_train.tsv"
 )
 
 
@@ -50,7 +51,7 @@ def random_dataset_sample(dataset: pd.DataFrame, nrows: int) -> pd.DataFrame:
     return random_subset
 
 
-def check_dimension(
+def check_dimension_is_correct(
     vectors: list, is_sentence_embedding: bool, dim: int
 ) -> bool:
     """
@@ -60,9 +61,8 @@ def check_dimension(
     Parameters
     ----------
     vectors: list
-        The vectorised sentences whose dimensions we want to check. Can
-        be a list of float values (sentence embedding) or a list of
-        lists of float values (vector of word embeddings).
+        A list of NumPy arrays representing vectors. The arrays may be
+        nested or not.
     is_sentence_embedding: bool
         Specifies whether we are checking for the dimension of a
         sentence embedding vector or a vector of word embeddings.
@@ -74,94 +74,72 @@ def check_dimension(
     bool
         True if all vectors have the correct dimension, False otherwise.
     """
-    for vector in vectors:
-        if is_sentence_embedding:
-            if len(vector) != dim:
-                return False
-        else:
-            for element in vector:
-                if len(element) != dim:
+    if is_sentence_embedding:
+        for vector in vectors:
+            if isinstance(vector, np.ndarray):
+                if vector.shape[0] != dim:
                     return False
+            else:
+                return False
+    else:
+        for vector in vectors:
+            if isinstance(vector, list):
+                for element in vector:
+                    if element.shape[0] != dim:
+                        return False
+            else:
+                return False
     return True
 
 
-def check_sentence_embedding_type(x: Union[list, pd.Series]) -> bool:
+def check_sentence_embedding_type_is_correct(x: list) -> bool:
     """
-    Checks if a list (or a pandas Series casted to a list) is of
-    type list[float], the expected type for a sentence embedding.
+    Checks if a list consists of elements of type
+    np.ndarray[np.float32], the expected type for a sentence embedding.
 
     Parameters
     ----------
-    x: Union[list, pd.Series]
-        The list or pandas Series to check.
+    x: list
+        The list to check.
 
     Returns
     -------
     bool
-        True if x (or x.tolist() if x is a pandas Series) is of type
-        list[list[float]], False otherwise.
+        True if x is of type list[np.ndarray[np.float32]], False
+        otherwise.
     """
-    x = x.tolist()
     for embedding in x:
-        if isinstance(embedding, list):
-            return all(isinstance(element, float) for element in embedding)
+        if isinstance(embedding, np.ndarray):
+            return np.all(np.issubdtype(embedding.dtype, np.float32))
 
     return False
 
 
-def check_word_embedding_type(x: Union[list, pd.Series]) -> bool:
+def check_sentence_word_type_is_correct(x: list) -> bool:
     """
-    Checks if a list (or a pandas Series casted to a list) is of type
-    list[list[float]], the expected type for a word embedding.
+    Checks if a list consists of elements of type
+    list[np.ndarray[np.float32]], the expected type for a word
+    embedding.
 
     Parameters
     ----------
-    x: Union[list, pd.Series]
-        The list or pandas Series to check.
+    x: list
+        The list to check.
 
     Returns
     -------
     bool
-        True if x (or x.tolist() if x is a pandas Series) is of type
-        list[list[float]], False otherwise.
+        True if x is of type list[list[np.ndarray[np.float32]]], False
+        otherwise.
     """
-    x = x.tolist()
     for vector in x:
         if isinstance(vector, list):
-            if all(isinstance(sublist, list) for sublist in vector):
-                return all(
-                    isinstance(element, float)
-                    for sublist in vector
-                    for element in sublist
-                )
+            return all(
+                np.all(np.issubdtype(embedding.dtype, np.float32))
+                for embedding in vector
+            )
 
     return False
-
-
-def parse_series(s: pd.Series):
-    """
-    Parses a pandas Series object to a Python list object. Thanks to
-    ast.literal_eval, we can read off embedding vectors as lists of
-    floats rather than lists of strings, which is how Series are read by
-    default from a CSV/TSV file.
-
-    Parameters
-    ----------
-    s: pd.Series
-        The pandas series to be parsed.
-
-    Returns
-    -------
-    Union[list, list[float], list[list[float]]]
-        An empty list if there are errors in parsing, a list of floats
-        if the series is comprised of sentence embeddings and a list of
-        lists of floats if the series is comprised of word embeddings.
-    """
-    try:
-        return ast.literal_eval(s)
-    except (SyntaxError, ValueError):
-        # Return an empty list if there's an error in parsing
-        return []
 
 
 # Define unit tests
@@ -269,7 +247,7 @@ class TestEmbedder(unittest.TestCase):
                     )
 
                 self.assertTrue(
-                    check_dimension(
+                    check_dimension_is_correct(
                         vectors, embedder.is_sentence_embedding, dim
                     )
                 )
@@ -285,7 +263,7 @@ class TestEmbedder(unittest.TestCase):
                 vectorised_df = embedder.dataset
                 vectors = vectorised_df["sentence_vectorised"]
                 self.assertTrue(
-                    check_dimension(
+                    check_dimension_is_correct(
                         vectors, embedder.is_sentence_embedding, embedder.dim
                     )
                 )
@@ -299,24 +277,26 @@ class TestEmbedder(unittest.TestCase):
         for embedder in self.embedders_list:
             with self.subTest(embedder=embedder):
                 filename = "test_file"
-                file_path = os.path.join(current_path, filename + ".tsv")
+                file_path = os.path.join(current_path, filename)
                 embedder.save_embedding_dataset(
                     path=current_path, filename=filename
                 )
-                saved_df = pd.read_csv(
-                    file_path,
-                    sep="\t",
-                    header=0,
-                )
+                file_path += ".pkl"
+                saved_df = pd.read_pickle(file_path)
 
                 if os.path.exists(file_path):
                     os.remove(file_path)
 
-                vectors = saved_df["sentence_vectorised"].apply(parse_series)
+                vectors = saved_df["sentence_vectorised"].to_list()
+
                 if embedder.is_sentence_embedding:
-                    self.assertTrue(check_sentence_embedding_type(vectors))
+                    self.assertTrue(
+                        check_sentence_embedding_type_is_correct(vectors)
+                    )
                 else:
-                    self.assertTrue(check_word_embedding_type(vectors))
+                    self.assertTrue(
+                        check_sentence_word_type_is_correct(vectors)
+                    )
 
     def testSentenceEmbeddingsForAGivenSentenceAreDifferentForDifferentEmbeddingTypes(
         self,
@@ -333,11 +313,13 @@ class TestEmbedder(unittest.TestCase):
                 with self.subTest(embedder1=embedder1, embedder2=embedder2):
                     embedding_list_1 = embedder1.dataset[
                         "sentence_vectorised"
-                    ].values.tolist()
+                    ].to_numpy()
                     embedding_list_2 = embedder2.dataset[
                         "sentence_vectorised"
-                    ].values.tolist()
-                    self.assertNotEqual(embedding_list_1, embedding_list_2)
+                    ].to_numpy()
+                    self.assertFalse(
+                        np.array_equal(embedding_list_1, embedding_list_2)
+                    )
 
     def checkAddingEmbeddingsToDatasetRaisesRuntimeErrorIfEmbeddingsNotComputed(
         self,
