@@ -352,9 +352,7 @@ def main(args) -> dict:
 
     # Train model and store model outputs
     t_before = time.time()
-    print("Training!\n\n")
     model.train()
-    print("Finished training!\n\n")
     t_after = time.time()
 
     train_loss_list = model.loss_train
