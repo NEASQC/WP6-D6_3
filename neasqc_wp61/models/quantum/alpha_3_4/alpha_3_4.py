@@ -182,7 +182,10 @@ class NewAlphaModel(ABC, torch.nn.Module):
         probs_train_val = [[], []]
         data_loaders = [self.data_loader_train, self.data_loader_val]
         opt = self.optimiser(self.parameters(), **self.optimiser_args)
-        dataset_size = len(self.data_loader_train.dataset)
+        dataset_size = [
+            len(self.data_loader_train.dataset),
+            len(self.data_loader_val.dataset),
+        ]
         for _ in range(self.epochs):
             loss_epoch_train_val = [0, 0]
             preds_epoch_train_val = [[], []]
@@ -192,10 +195,6 @@ class NewAlphaModel(ABC, torch.nn.Module):
                     vector = vector.to(self.device)
                     label = label.to(self.device)
                     opt.zero_grad()
-                    print(self.forward(vector))
-                    print("--------------------")
-                    print(label)
-                    print("--------------------")
                     batch_loss = self.loss_function(
                         self.forward(vector), label.long()
                     )
@@ -213,7 +212,7 @@ class NewAlphaModel(ABC, torch.nn.Module):
                         batch_loss.backward()
                         opt.step()
                 loss_train_val[i].append(
-                    loss_epoch_train_val[i] / dataset_size
+                    loss_epoch_train_val[i] / dataset_size[i]
                 )
                 preds_train_val[i].append(preds_epoch_train_val[i])
                 probs_train_val[i].append(probs_epoch_train_val[i])
