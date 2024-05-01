@@ -26,6 +26,7 @@ import circuit as circ
 
 from alpha_3_4 import Alpha3, Alpha3
 
+
 parser = argparse.ArgumentParser()
 
 # Model-related arguments
@@ -36,7 +37,6 @@ parser.add_argument(
     help="Choice between alpha_3 and alpha_4 model.",
     type=str,
     choices=["alpha_3", "alpha_4"],
-    default="alpha_3",
 )
 parser.add_argument(
     "-dat",
@@ -51,21 +51,18 @@ parser.add_argument(
     help="Split ID - indicates what split will be used as validation data."
     "The split with split ID + 1 will be used as test data.",
     type=int,
-    default=0,
 )
 parser.add_argument(
     "-s",
     "--seed",
     help="Seed for the initial parameters",
     type=int,
-    default=150298,
 )
 parser.add_argument(
     "-e",
     "--epochs",
     help="Number of iterations/epochs",
     type=int,
-    default=150,
 )
 
 # Optimiser arguments
@@ -75,21 +72,18 @@ parser.add_argument(
     "--optimiser",
     help="Choice of torch optimiser",
     type=str,
-    default="Adam",
 )
 parser.add_argument(
     "-b",
     "--batch_size",
     help="Batch size",
     type=int,
-    default=512,
 )
 parser.add_argument(
     "-lr",
     "--learning_rate",
     help="Learning rate for the optimiser",
     type=float,
-    default=0.001,
 )
 
 # Arguments for data vectorisation
@@ -99,7 +93,6 @@ parser.add_argument(
     "--embedder",
     help="Choice of embedder",
     type=str,
-    default="Bert",
 )
 # In current pipeline we pass an already vectorised dataset
 # as argument, so this argument is for book-keeping
@@ -110,7 +103,6 @@ parser.add_argument(
     help="Choice of dimensionality reduction mechanism",
     type=str,
     choices=["PCA", "ICA", "TSVD", "UMAP"],
-    default="PCA",
 )
 
 # Arguments for quantum circuit architecture
@@ -121,21 +113,18 @@ parser.add_argument(
     help="Choice of quantum circuit architecture",
     type=str,
     choices=["Sim14", "Sim15", "StronglyEntanglingAnsatz"],
-    default="Sim14",
 )
 parser.add_argument(
     "-nq",
     "--n_qubits",
     help="Number of qubits in the circuit",
     type=int,
-    default=3,
 )
 parser.add_argument(
     "-nl",
     "--n_layers",
     help="Number of layers in the circuit",
     type=int,
-    default=1,
 )
 parser.add_argument(
     "-res",
@@ -143,7 +132,6 @@ parser.add_argument(
     help="Function to apply to rescale the inputs that will be encoded \
         in the first wall of the quantum circuit.",
     type=str,
-    default="none",
     choices=["none", "rescaled_unif", "unif", "norm"],
 )
 parser.add_argument(
@@ -151,7 +139,6 @@ parser.add_argument(
     "--circuit_init",
     help="Function to be used to initialise circuit optimisable parameters.",
     type=str,
-    default=None,
     choices=["none", "rescaled_unif", "unif", "norm"],
 )
 
@@ -162,7 +149,6 @@ parser.add_argument(
     "--mlp_init",
     help="Distribution to initialise the post-processing layer optimisable parameters.",
     type=str,
-    default=None,
     choices=["none", "rescaled_unif", "unif", "norm"],
 )
 
@@ -276,8 +262,8 @@ def main(args) -> dict:
 
     # Set dataset
     if args.dataset == "ag_news":
+        dataset_path = "../datasets/ag_news_bert_balanced_cvsplit.pkl"
         n_classes = 4
-        pass
     elif args.dataset == "newscatcher":
         n_classes = 7
         pass
@@ -287,6 +273,9 @@ def main(args) -> dict:
     elif args.dataset == "bert_test":
         n_classes = 2
         dataset_path = "../datasets/bert_test_pipeline_dataset.pkl"
+    elif args.dataset == "bert_test_y_z":
+        n_classes = 2
+        dataset_path = "../datasets/test_y_z_bert_dataset.pkl"
 
     sentence_vectors = []
     labels = []
@@ -321,7 +310,7 @@ def main(args) -> dict:
             n_qubits=args.n_qubits,
             n_layers=args.n_layers,
             axis_embedding="X",
-            observables={key: qml.PauliY for key in range(args.n_qubits)},
+            observables={key: qml.PauliZ for key in range(args.n_qubits)},
             data_rescaling=data_rescaling,
             output_probabilities=False,
         )
@@ -362,16 +351,11 @@ def main(args) -> dict:
         raise ValueError("An unrecognised model type was specified.")
 
     # Train model and store model outputs
-    """
-    print(
-        f"----------\n"
-        "Beginning training for the set of parameters with ID: {args.exp_id}\n"
-        "----------\n"
-    )"""
     t_before = time.time()
+    print("Training!\n\n")
     model.train()
+    print("Finished training!\n\n")
     t_after = time.time()
-    # print("\n----- Training completed! -----\n")
 
     train_loss_list = model.loss_train
     train_preds_list = model.preds_train
@@ -381,7 +365,6 @@ def main(args) -> dict:
     val_probs_list = model.probs_val
 
     time_taken = t_after - t_before
-    # print(f"Time taken to run = {time_taken}\n")
 
     results_dict = {
         "split_id": args.split_id,
@@ -416,9 +399,5 @@ def main(args) -> dict:
 
 
 if __name__ == "__main__":
-    main(args)
-
-
-# Finish documenting
-
-# Test with ag_news dataset, test outputs look good
+    # main(args)
+    main()
