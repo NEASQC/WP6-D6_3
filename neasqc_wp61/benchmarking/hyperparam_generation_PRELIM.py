@@ -9,7 +9,7 @@ number_of_layers = [2]
 number_of_qubits = [8]
 qubit_initialisation_technique = ["norm", "rescaled_unif"]
 optimizer = ["Adam", "RMSprop"]
-optimizer_lr = [0.001]
+optimizer_lr = [0.005]
 mlp_init = ["unif", "norm"]
 
 combinations = list(
