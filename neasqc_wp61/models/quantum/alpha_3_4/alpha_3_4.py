@@ -91,9 +91,11 @@ class NewAlphaModel(ABC, torch.nn.Module):
         self.data_loader_val = DataLoader(
             Dataset(sentence_vectors[1], labels[1]), batch_size=batch_size
         )
+        """
         self.data_loader_test = DataLoader(
             Dataset(sentence_vectors[2], labels[2]), batch_size=batch_size
         )
+        """
         self.n_classes = n_classes
         self.circuit = circuit
         self.optimiser = optimiser
@@ -180,7 +182,10 @@ class NewAlphaModel(ABC, torch.nn.Module):
         probs_train_val = [[], []]
         data_loaders = [self.data_loader_train, self.data_loader_val]
         opt = self.optimiser(self.parameters(), **self.optimiser_args)
-        dataset_size = len(self.data_loader_train.dataset)
+        dataset_size = [
+            len(self.data_loader_train.dataset),
+            len(self.data_loader_val.dataset),
+        ]
         for _ in range(self.epochs):
             loss_epoch_train_val = [0, 0]
             preds_epoch_train_val = [[], []]
@@ -191,7 +196,7 @@ class NewAlphaModel(ABC, torch.nn.Module):
                     label = label.to(self.device)
                     opt.zero_grad()
                     batch_loss = self.loss_function(
-                        self.forward(vector), label
+                        self.forward(vector), label.long()
                     )
                     loss_epoch_train_val[i] += (
                         batch_loss.item() * vector.shape[0]
@@ -207,7 +212,7 @@ class NewAlphaModel(ABC, torch.nn.Module):
                         batch_loss.backward()
                         opt.step()
                 loss_train_val[i].append(
-                    loss_epoch_train_val[i] / dataset_size
+                    loss_epoch_train_val[i] / dataset_size[i]
                 )
                 preds_train_val[i].append(preds_epoch_train_val[i])
                 probs_train_val[i].append(probs_epoch_train_val[i])
